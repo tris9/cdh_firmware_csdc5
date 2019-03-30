@@ -2,12 +2,17 @@
 #include "hardware/init.h"
 #include "hardware/uart.h"
 #include "os/os.h"
+#include "hardware/spi.h"
 
 UART uart{UART::U3, 9600, GPIO::D, 8, 9};
+SPI spi{SPI::S1, 9600, GPIO::A, 6, 7, 5, 4, SPI_MODE_MASTER, SPI_DIRECTION_2LINES, SPI_NSS_HARD_OUTPUT};
 GPIO led{GPIO::B, 7, GPIO::OutputPP, GPIO::None, 0};
 
 void init_func();
 StaticTask<128> init_task{"INIT", 0, init_func};
+
+void spi_test();
+StaticTask<128> spi_task{"SPI", 0, spi_test};
 
 /**
  * @brief Main entry point for Trillium's firmware.
@@ -31,6 +36,7 @@ int main() {
     hardware_init();
 
     init_task.start();
+    spi_task.start();
 
     // Does not return.
     os_init();
@@ -41,6 +47,8 @@ int main() {
  * @ref main, it is safe to use asynchronous or blocking calls here.
  */
 void init_func() {
+    spi.init();
+
     uart.init();
     uart.transmit("init complete\n\r")
         .map([](UART::SendStatus x) { return 2; })
@@ -51,4 +59,16 @@ void init_func() {
     led.set(true);
 
     init_task.stop();
+}
+
+void spi_test() {
+    char c[] = "1";
+    while(1)
+    {
+        //spi.transmit("a").block();
+        spi.receive(c);
+        uart.transmit(c);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+
+    }
 }

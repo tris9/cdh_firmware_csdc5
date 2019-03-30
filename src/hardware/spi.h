@@ -11,9 +11,16 @@
  * Need to forward-declare interrupt handlers and callbacks so they
  * can be declared friends later.
  */
-//extern "C" void HAL_SPI_TxCpltCallback(void *, SPI_HandleTypeDef *);
-//extern "C" void HAL_SPI_TxAbortCallback(void *, SPI_HandleTypeDef *);
-//extern "C" void HAL_SPI_ErrorCallback(void *, SPI_HandleTypeDef *);
+void HAL_SPI_TxCpltCallback(void*, SPI_HandleTypeDef*);
+void HAL_SPI_TxAbortCallback(void*, SPI_HandleTypeDef*);
+void HAL_SPI_ErrorCallback(void*, SPI_HandleTypeDef*);
+
+extern "C" void handle_spi1_irq();
+extern "C" void handle_spi2_irq();
+extern "C" void handle_spi3_irq();
+extern "C" void handle_spi4_irq();
+extern "C" void handle_spi5_irq();
+extern "C" void handle_spi6_irq();
 
 class SPI : public Hardware {
 public:
@@ -43,6 +50,9 @@ public:
     Async<SendStatus> transmit(uint8_t *, size_t len);
     Async<SendStatus> transmit(char *);
 
+    Async<SendStatus> receive(uint8_t *, size_t len);
+    Async<SendStatus> receive(char *);
+
 protected:
     Port port;                //< The SPI we own.
     SPI_TypeDef *regs;        //< Pointer to our register block;
@@ -58,6 +68,7 @@ protected:
     GPIO nss;  //< GPIO NSS pin that we own
 
     Producer<SendStatus> sender; //< Creates @ref Async instances for us.
+    Producer<SendStatus> receiver;
 
     static SPI_TypeDef *const portregs[6];
     static const uint8_t gpio_afs[6];
@@ -72,16 +83,14 @@ protected:
      * These handlers and callbacks need to be friends so that they
      * can access uarts and uart_handles.
      */
-    //friend void ::HAL_SPI_TxCpltCallback(void *, SPI_HandleTypeDef *);
-    //friend void ::HAL_SPI_TxAbortCallback(void *, SPI_HandleTypeDef *);
-    //friend void ::HAL_SPI_ErrorCallback(void *, SPI_HandleTypeDef *);
+    friend void ::HAL_SPI_TxCpltCallback(void *, SPI_HandleTypeDef *);
+    friend void ::HAL_SPI_TxAbortCallback(void *, SPI_HandleTypeDef *);
+    friend void ::HAL_SPI_ErrorCallback(void *, SPI_HandleTypeDef *);
 
-    // friend void ::handle_usart1_irq();
-    // friend void ::handle_usart2_irq();
-    // friend void ::handle_usart3_irq();
-    // friend void ::handle_uart4_irq();
-    // friend void ::handle_uart5_irq();
-    // friend void ::handle_usart6_irq();
-    // friend void ::handle_uart7_irq();
-    // friend void ::handle_uart8_irq();
+    friend void ::handle_spi1_irq();
+    friend void ::handle_spi2_irq();
+    friend void ::handle_spi3_irq();
+    friend void ::handle_spi4_irq();
+    friend void ::handle_spi5_irq();
+    friend void ::handle_spi6_irq();
 };

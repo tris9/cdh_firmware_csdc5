@@ -37,7 +37,7 @@ SPI::SPI(SPI::Port port, uint32_t baud, GPIO::Port gpio, uint8_t miso, uint8_t m
         SPI_POLARITY_LOW,
         SPI_PHASE_1EDGE,
         nss_mode,
-        baud_prescalar,
+        0,//baud_prescalar,
         SPI_FIRSTBIT_MSB,
         SPI_TIMODE_DISABLE,
         SPI_CRCCALCULATION_DISABLE,
@@ -108,6 +108,18 @@ Async<SPI::SendStatus> SPI::transmit(char *msg) {
     return transmit(data, len);
 }
 
+Async<SPI::SendStatus> SPI::receive(uint8_t * data, size_t len){
+    HAL_SPI_Receive_IT(&handle, data, len);
+    return sender.promise();
+}
+
+Async<SPI::SendStatus> SPI::receive(char *msg){
+    size_t len = strlen(msg);
+    uint8_t *data = reinterpret_cast<uint8_t *>(msg);
+
+    return receive(data,len);
+}
+
 SPI *SPI::spis[6];           //< Pointers to any SPIs in use, so
                                 //  interrupt handlers can access them.
 SPI_HandleTypeDef *SPI::spi_handles[6]; //< The interrupt callbacks
@@ -166,26 +178,26 @@ void (*const SPI::dis_funcs[6])() = {
 };
 
 
-// /**
-//  * @brief Called by the HAL when a nonblocking UART transmission is
-//  * complete.
-//  */
-// void HAL_SPI_TxCpltCallback(void *d, SPI_HandleTypeDef *) {
-//     static_cast<SPI *>(d)->sender.fulfill_isr(SPI::SendStatus::COMPLETE);
-// }
+/**
+ * @brief Called by the HAL when a nonblocking UART transmission is
+ * complete.
+ */
+void HAL_SPI_TxCpltCallback(void *d, SPI_HandleTypeDef *) {
+    static_cast<SPI *>(d)->sender.fulfill_isr(SPI::SendStatus::COMPLETE);
+}
 
-// /**
-//  * @brief Called by the HAL when a nonblocking UART transmission has
-//  * been aborted by @ref UART::abort().
-//  */
-// void HAL_SPI_TxAbortCallback(void *d, SPI_HandleTypeDef *) {
-//     static_cast<SPI *>(d)->sender.fulfill_isr(SPI::SendStatus::ABORTED);
-// }
+/**
+ * @brief Called by the HAL when a nonblocking UART transmission has
+ * been aborted by @ref UART::abort().
+ */
+void HAL_SPI_TxAbortCallback(void *d, SPI_HandleTypeDef *) {
+    static_cast<SPI *>(d)->sender.fulfill_isr(SPI::SendStatus::ABORTED);
+}
 
-// /**
-//  * @brief Called by the HAL when a nonblocking UART operation has
-//  * failed.
-//  */
-// void HAL_SPI_ErrorCallback(void *d, SPI_HandleTypeDef *) {
-//     static_cast<SPI *>(d)->sender.fulfill_isr(SPI::SendStatus::ERROR);
-// }
+/**
+ * @brief Called by the HAL when a nonblocking UART operation has
+ * failed.
+ */
+void HAL_SPI_ErrorCallback(void *d, SPI_HandleTypeDef *) {
+    static_cast<SPI *>(d)->sender.fulfill_isr(SPI::SendStatus::ERROR);
+}
