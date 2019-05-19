@@ -24,41 +24,46 @@ SPI::SPI(SPI::Port port, uint32_t baud, GPIO::Port gpio, uint8_t miso, uint8_t m
  * GPIOs and installing interrupt handlers, too.
  */
  void SPI::init(){
-     uint32_t baud_prescaler;
-
-
-
 
     handle.Instance = regs;
     handle.Init = {
-        mode,
-        direction,
-        SPI_DATASIZE_4BIT,
-        SPI_POLARITY_LOW,
-        SPI_PHASE_1EDGE,
-        nss_mode,
-        0,//baud_prescalar,
-        SPI_FIRSTBIT_MSB,
-        SPI_TIMODE_DISABLE,
-        SPI_CRCCALCULATION_DISABLE,
-        7,
-        SPI_CRC_LENGTH_DATASIZE,
-        SPI_NSS_PULSE_DISABLE,
-        SPI_NSS_POLARITY_LOW,
-        SPI_FIFO_THRESHOLD_01DATA,
-        SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN,
-        SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN,
-        SPI_MASTER_SS_IDLENESS_00CYCLE,
-        SPI_MASTER_INTERDATA_IDLENESS_00CYCLE,
-        SPI_MASTER_RX_AUTOSUSP_DISABLE,
-        SPI_MASTER_KEEP_IO_STATE_DISABLE,
-        SPI_IO_SWAP_DISABLE,
+        .Mode = mode,
+        .Direction = direction,
+        .DataSize = SPI_DATASIZE_4BIT,
+        .CLKPolarity = SPI_POLARITY_LOW,
+        .CLKPhase = SPI_PHASE_1EDGE,
+        .NSS = nss_mode,
+        .BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2,
+        .FirstBit = SPI_FIRSTBIT_MSB,
+        .TIMode = SPI_TIMODE_DISABLE,
+        .CRCCalculation = SPI_CRCCALCULATION_DISABLE,
+        .CRCPolynomial = 7,
+        .CRCLength = SPI_CRC_LENGTH_DATASIZE,
+        .NSSPMode = SPI_NSS_PULSE_DISABLE,
+        .NSSPolarity = SPI_NSS_POLARITY_LOW,
+        .FifoThreshold = SPI_FIFO_THRESHOLD_01DATA,
+        .TxCRCInitializationPattern = SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN,
+        .RxCRCInitializationPattern = SPI_CRC_INITIALIZATION_ALL_ZERO_PATTERN,
+        .MasterSSIdleness = SPI_MASTER_SS_IDLENESS_00CYCLE,
+        .MasterInterDataIdleness = SPI_MASTER_INTERDATA_IDLENESS_00CYCLE,
+        .MasterReceiverAutoSusp = SPI_MASTER_RX_AUTOSUSP_DISABLE,
+        .MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_DISABLE,
+        .IOSwap = SPI_IO_SWAP_DISABLE,
     };
 
     miso.init();
     mosi.init();
     slck.init();
     nss.init();
+
+    // initialize the clock and interrupt
+    en_funcs[port]();
+    HAL_NVIC_SetPriority(irqns[port], 14, 15);
+    HAL_NVIC_EnableIRQ(irqns[port]);
+
+    HAL_SPI_Init(&handle);
+
+    spi_handles[port] = &handle;
 
  }
 
@@ -110,7 +115,7 @@ Async<SPI::SendStatus> SPI::transmit(char *msg) {
 
 Async<SPI::SendStatus> SPI::receive(uint8_t * data, size_t len){
     HAL_SPI_Receive_IT(&handle, data, len);
-    return sender.promise();
+    return receiver.promise();
 }
 
 Async<SPI::SendStatus> SPI::receive(char *msg){
@@ -182,22 +187,50 @@ void (*const SPI::dis_funcs[6])() = {
  * @brief Called by the HAL when a nonblocking UART transmission is
  * complete.
  */
-void HAL_SPI_TxCpltCallback(void *d, SPI_HandleTypeDef *) {
-    static_cast<SPI *>(d)->sender.fulfill_isr(SPI::SendStatus::COMPLETE);
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *) {
+    SPI::spis[0]->sender.fulfill_isr(SPI::SendStatus::COMPLETE);
 }
 
 /**
  * @brief Called by the HAL when a nonblocking UART transmission has
  * been aborted by @ref UART::abort().
  */
-void HAL_SPI_TxAbortCallback(void *d, SPI_HandleTypeDef *) {
-    static_cast<SPI *>(d)->sender.fulfill_isr(SPI::SendStatus::ABORTED);
+void HAL_SPI_TxAbortCallback(SPI_HandleTypeDef *) {
+    SPI::spis[0]->sender.fulfill_isr(SPI::SendStatus::ABORTED);
 }
 
 /**
  * @brief Called by the HAL when a nonblocking UART operation has
  * failed.
  */
-void HAL_SPI_ErrorCallback(void *d, SPI_HandleTypeDef *) {
-    static_cast<SPI *>(d)->sender.fulfill_isr(SPI::SendStatus::ERROR);
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *) {
+    SPI::spis[0]->sender.fulfill_isr(SPI::SendStatus::ERROR);
+}
+
+/**
+ * @defgroup SPI IRQ Handlers
+ * @{
+ */
+void handle_spi1_irq() {
+    HAL_SPI_IRQHandler(SPI::spi_handles[0]);
+}
+
+void handle_spi2_irq() {
+    HAL_SPI_IRQHandler(SPI::spi_handles[1]);
+}
+
+void handle_spi3_irq() {
+    HAL_SPI_IRQHandler(SPI::spi_handles[2]);
+}
+
+void handle_spi4_irq() {
+    HAL_SPI_IRQHandler(SPI::spi_handles[3]);
+}
+
+void handle_spi5_irq() {
+    HAL_SPI_IRQHandler(SPI::spi_handles[4]);
+}
+
+void handle_spi6_irq() {
+    HAL_SPI_IRQHandler(SPI::spi_handles[5]);
 }

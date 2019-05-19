@@ -11,9 +11,9 @@
  * Need to forward-declare interrupt handlers and callbacks so they
  * can be declared friends later.
  */
-void HAL_SPI_TxCpltCallback(void*, SPI_HandleTypeDef*);
-void HAL_SPI_TxAbortCallback(void*, SPI_HandleTypeDef*);
-void HAL_SPI_ErrorCallback(void*, SPI_HandleTypeDef*);
+extern "C" void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef*);
+extern "C" void HAL_SPI_TxAbortCallback(SPI_HandleTypeDef*);
+extern "C" void HAL_SPI_ErrorCallback(SPI_HandleTypeDef*);
 
 extern "C" void handle_spi1_irq();
 extern "C" void handle_spi2_irq();
@@ -83,9 +83,9 @@ protected:
      * These handlers and callbacks need to be friends so that they
      * can access uarts and uart_handles.
      */
-    friend void ::HAL_SPI_TxCpltCallback(void *, SPI_HandleTypeDef *);
-    friend void ::HAL_SPI_TxAbortCallback(void *, SPI_HandleTypeDef *);
-    friend void ::HAL_SPI_ErrorCallback(void *, SPI_HandleTypeDef *);
+    friend void ::HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *);
+    friend void ::HAL_SPI_TxAbortCallback(SPI_HandleTypeDef *);
+    friend void ::HAL_SPI_ErrorCallback(SPI_HandleTypeDef *);
 
     friend void ::handle_spi1_irq();
     friend void ::handle_spi2_irq();

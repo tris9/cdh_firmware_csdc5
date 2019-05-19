@@ -37,7 +37,7 @@ int main() {
 
     init_task.start();
     spi_task.start();
-
+    
     // Does not return.
     os_init();
 }
@@ -62,12 +62,15 @@ void init_func() {
 }
 
 void spi_test() {
-    char c[] = "1";
+    char c[] = "8";
     while(1)
     {
-        //spi.transmit("a").block();
-        spi.receive(c);
-        uart.transmit(c);
+        spi.transmit("a")
+           .map([](SPI::SendStatus x) { return 2; });
+
+        spi.receive(c)
+           .map([](SPI::SendStatus x) { return 2; });
+        uart.transmit(c).map([](UART::SendStatus x) { return 2; });
         vTaskDelay(500 / portTICK_PERIOD_MS);
 
     }
